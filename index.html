@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ACT FAST Full Balance</title>
+  <title>ACT FAST Balance Overview</title>
   <style>
     body {
       background: #000;
@@ -16,69 +16,41 @@
       text-shadow: 0 0 10px #ff6f00;
     }
     .balance {
-      font-size: 1.2rem;
-      margin: 1rem 0;
+      font-size: 1.3rem;
+      margin: 1rem auto;
       padding: 1rem;
       border: 1px solid #ff6f00;
       border-radius: 8px;
       box-shadow: 0 0 10px #ff6f00;
       max-width: 360px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
     }
     .label {
       font-weight: bold;
-      margin-top: 1rem;
+      margin-bottom: 0.5rem;
     }
   </style>
 </head>
 <body>
 
-  <h1>ACT FAST Full Balance</h1>
+  <h1>ACT FAST Balance Overview</h1>
 
   <div class="balance">
-    <div class="label">Vault Balance (vault wallet):</div>
-    <div id="vault">Loading...</div>
+    <div class="label">FAST Wallet (Spot + Perp):</div>
+    <div id="fastBalance">Loading...</div>
   </div>
 
   <div class="balance">
-    <div class="label">Spot Balances:</div>
-    <div>FAST wallet: <span id="spotFast">Loading...</span></div>
-    <div>Vault wallet: <span id="spotVault">Loading...</span></div>
+    <div class="label">Vault Wallet (Perp only):</div>
+    <div id="vaultPerpBalance">Loading...</div>
   </div>
 
-  <div class="balance">
-    <div class="label">Perp Balances:</div>
-    <div>FAST wallet: <span id="perpFast">Loading...</span></div>
-    <div>Vault wallet: <span id="perpVault">Loading...</span></div>
-  </div>
-
-  <div class="balance" style="font-weight: bold; font-size: 1.5rem; text-align: center;">
-    Total Balance: <span id="total">Loading...</span>
+  <div class="balance" style="font-weight: bold; font-size: 1.5rem;">
+    Total Combined Balance: <span id="totalBalance">Loading...</span>
   </div>
 
   <script>
-    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";   // spot & perp
-    const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1"; // vault, spot & perp
-
-    async function fetchVaultBalance(address) {
-      try {
-        const res = await fetch("https://api.hyperliquid.xyz/info", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "vaultState", user: address })
-        });
-        const data = await res.json();
-        if (data.vaults && data.vaults.length > 0) {
-          return data.vaults.reduce((sum, v) => sum + parseFloat(v.valueUSD), 0);
-        }
-        return 0;
-      } catch (e) {
-        console.error("Vault fetch error:", e);
-        return 0;
-      }
-    }
+    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
+    const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
 
     async function fetchSpotBalance(address) {
       try {
@@ -116,37 +88,27 @@
       }
     }
 
-    async function fetchAllBalances() {
-      // Show loading text
-      document.getElementById('vault').textContent = "Loading...";
-      document.getElementById('spotFast').textContent = "Loading...";
-      document.getElementById('spotVault').textContent = "Loading...";
-      document.getElementById('perpFast').textContent = "Loading...";
-      document.getElementById('perpVault').textContent = "Loading...";
-      document.getElementById('total').textContent = "Loading...";
+    async function fetchBalances() {
+      document.getElementById('fastBalance').textContent = "Loading...";
+      document.getElementById('vaultPerpBalance').textContent = "Loading...";
+      document.getElementById('totalBalance').textContent = "Loading...";
 
-      // Fetch balances
-      const vault = await fetchVaultBalance(VAULT_WALLET);
+      const [fastSpot, fastPerp, vaultPerp] = await Promise.all([
+        fetchSpotBalance(FAST_WALLET),
+        fetchPerpBalance(FAST_WALLET),
+        fetchPerpBalance(VAULT_WALLET),
+      ]);
 
-      const spotFast = await fetchSpotBalance(FAST_WALLET);
-      const spotVault = await fetchSpotBalance(VAULT_WALLET);
+      const fastTotal = fastSpot + fastPerp;
+      const total = fastTotal + vaultPerp;
 
-      const perpFast = await fetchPerpBalance(FAST_WALLET);
-      const perpVault = await fetchPerpBalance(VAULT_WALLET);
-
-      // Calculate total sum
-      const total = vault + spotFast + spotVault + perpFast + perpVault;
-
-      // Update UI
-      document.getElementById('vault').textContent = vault.toFixed(4);
-      document.getElementById('spotFast').textContent = spotFast.toFixed(4);
-      document.getElementById('spotVault').textContent = spotVault.toFixed(4);
-      document.getElementById('perpFast').textContent = perpFast.toFixed(4);
-      document.getElementById('perpVault').textContent = perpVault.toFixed(4);
-      document.getElementById('total').textContent = total.toFixed(4);
+      document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
+      document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
+      document.getElementById('totalBalance').textContent = total.toFixed(4);
     }
 
-    fetchAllBalances();
+    fetchBalances();
   </script>
+
 </body>
 </html>

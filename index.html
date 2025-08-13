@@ -34,11 +34,12 @@
                 const mouseY = y; // Capture mouse y-position
                 const isUp = mouseY < 200; // Above center is up
                 const closeY = mouseY; // Close price at mouse position
-                const bodyHeight = Math.abs(200 - mouseY); // Distance from center to mouse
+                const openY = 200; // Open price at center
+                const bodyHeight = Math.abs(closeY - openY);
                 const color = isUp ? 'green' : 'red';
                 const wickLength = Math.random() * 20 + 10; // Random wick 10-30
 
-                candles.push({ x: x, closeY: closeY, bodyHeight: bodyHeight, color, wickLength });
+                candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight: bodyHeight, color, wickLength });
                 lastX = x;
             } else if (e.movementX < 0) { // Moving left deletes last candle
                 candles.pop();
@@ -52,13 +53,13 @@
         function drawCandles() {
             candles.forEach(candle => {
                 ctx.fillStyle = candle.color;
-                const bodyTop = candle.closeY < 200 ? candle.closeY : 200 - candle.bodyHeight;
+                const bodyTop = candle.closeY < candle.openY ? candle.closeY : candle.openY;
                 ctx.fillRect(candle.x - 5, bodyTop, 10, candle.bodyHeight); // Body
                 ctx.beginPath();
-                ctx.moveTo(candle.x, bodyTop - candle.wickLength); // Top wick
+                ctx.moveTo(candle.x, bodyTop - (candle.closeY < candle.openY ? candle.wickLength : 0)); // Top wick start
                 ctx.lineTo(candle.x, bodyTop); // To body top
                 ctx.moveTo(candle.x, bodyTop + candle.bodyHeight); // From body bottom
-                ctx.lineTo(candle.x, bodyTop + candle.bodyHeight + candle.wickLength); // Bottom wick
+                ctx.lineTo(candle.x, bodyTop + candle.bodyHeight + (candle.closeY > candle.openY ? candle.wickLength : 0)); // Bottom wick end
                 ctx.stroke();
             });
         }

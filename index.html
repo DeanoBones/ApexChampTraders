@@ -31,15 +31,16 @@
 <body>
 
   <h1>ACT FAST Full Balance</h1>
-  <div class="balance">Vault Balance: <span id="vault">Loading...</span></div>
-  <div class="balance">Spot Balance: <span id="spot">Loading...</span></div>
-  <div class="balance">Perp Balance: <span id="perp">Loading...</span></div>
+  <div class="balance">Vault Balance (Vault Wallet): <span id="vault">Loading...</span></div>
+  <div class="balance">Spot Balance (FAST Wallet): <span id="spot">Loading...</span></div>
+  <div class="balance">Perp Balance (FAST Wallet): <span id="perp">Loading...</span></div>
   <div class="balance" style="font-weight: bold; font-size: 1.5rem;">
     Total Balance: <span id="total">Loading...</span>
   </div>
 
   <script>
-    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732"; // <-- Replace with your wallet address
+    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";   // For spot & perp
+    const VAULT_WALLET = "0xe1e5653df564ce8061047a79a3d7cf29061f22ac"; // For vault balance
 
     async function fetchVaultBalance(address) {
       try {
@@ -101,7 +102,7 @@
       document.getElementById('perp').textContent = "Loading...";
       document.getElementById('total').textContent = "Loading...";
 
-      const vault = await fetchVaultBalance(FAST_WALLET);
+      const vault = await fetchVaultBalance(VAULT_WALLET);
       const spot = await fetchSpotBalance(FAST_WALLET);
       const perp = await fetchPerpBalance(FAST_WALLET);
 

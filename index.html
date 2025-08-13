@@ -1,193 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Apex Champ Traders</title>
-<style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: black;
-    font-family: "Microsoft Sans Serif", sans-serif;
-    color: white;
-    overflow: hidden;
-  }
-
-  .banner {
-    background: orange;
-    padding: 15px;
-    text-align: center;
-    font-size: 24px;
-    font-weight: bold;
-    color: black;
-  }
-
-  .container {
-    position: relative;
-    z-index: 1;
-    padding: 40px 20px;
-    text-align: center;
-  }
-
-  .balance {
-    font-size: 48px;
-    margin-bottom: 10px;
-  }
-
-  .label {
-    font-size: 18px;
-    margin-bottom: 20px;
-  }
-
-  .fast {
-    margin-top: 40px;
-    font-size: 28px;
-  }
-
-  .description {
-    font-size: 16px;
-    margin-top: 5px;
-  }
-
-  canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-
-  #sparkline {
-    margin-top: 20px;
-    height: 60px;
-    width: 200px;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>ACT FAST Balance Overview</title>
+  <style>
+    body {
+      background: #000;
+      color: #ff6f00;
+      font-family: "Microsoft Sans Serif", Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 2rem;
+    }
+    header {
+      background-color: #ff6f00;
+      padding: 1rem 0;
+      margin-bottom: 3rem;
+      box-shadow: 0 3px 8px rgba(255,111,0,0.7);
+    }
+    header h1 {
+      color: #000;
+      margin: 0;
+      font-weight: 900;
+      font-size: 2rem;
+      letter-spacing: 1.5px;
+    }
+    .balance {
+      font-size: 1.8rem;
+      margin: 1rem auto 0;
+      padding: 1rem;
+      border: 1px solid #ff6f00;
+      border-radius: 8px;
+      box-shadow: 0 0 15px #ff6f00;
+      max-width: 400px;
+      font-weight: 700;
+    }
+    .label {
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+      text-align: center;
+      color: #ff6f00;
+    }
+    .description {
+      max-width: 420px;
+      margin: 0.5rem auto 2rem;
+      font-size: 1rem;
+      color: white;
+      font-weight: 500;
+    }
+    .pnl {
+      font-size: 1.3rem;
+      color: #fff;
+      margin-top: 0.5rem;
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
 
-<div class="banner">Apex Champ Traders</div>
+  <header>
+    <h1>Apex Champ Traders</h1>
+  </header>
 
-<div class="container">
-  <div class="balance" id="vaultBalance">$0.00</div>
-  <div class="label">ACT Balance</div>
-  
-  <canvas id="sparkline"></canvas>
-  
-  <div class="fast" id="fastBalance">$0.00</div>
-  <div class="description">Funded Asset Secured Treasury which is to be used in case of liquidation risk.</div>
-  
-  <div class="fast" id="pnl">PnL: $0.00</div>
-</div>
+  <div class="balance">
+    <div class="label">ACT Balance</div>
+    <div id="vaultPerpBalance">Loading...</div>
+    <div id="vaultPnL" class="pnl">Loading PnL...</div>
+  </div>
 
-<canvas id="background"></canvas>
+  <div class="balance" style="margin-top: 3rem; font-size: 1.5rem; font-weight: 600;">
+    <div class="label" style="color: #ff6f00;">ACT FAST Balance</div>
+    <div id="fastBalance">Loading...</div>
+  </div>
+  <div class="description">
+    Funded Asset Secured Treasury which is to be used in case of liquidation risk.
+  </div>
 
-<script>
-  // ======== FAKE SPARKLINE DATA ========
-  const startingBalance = 300;
-  let vaultBalance = 386; // example current Vault balance
-  let pnl = vaultBalance - startingBalance;
-  
-  const sparkCanvas = document.getElementById("sparkline");
-  sparkCanvas.width = 200;
-  sparkCanvas.height = 60;
-  const sparkCtx = sparkCanvas.getContext("2d");
+  <script>
+    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
+    const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
 
-  function drawSparkline() {
-    const points = 20;
-    let balances = [];
-    for (let i = 0; i < points; i++) {
-      let t = i / (points - 1);
-      let fluctuation = (Math.random() - 0.5) * 5; // random small variation
-      balances.push(startingBalance + t * pnl + fluctuation);
+    async function fetchSpotBalance(address) {
+      try {
+        const res = await fetch("https://api.hyperliquid.xyz/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "spotClearinghouseState", user: address })
+        });
+        const data = await res.json();
+        if (data.balances) {
+          return data.balances.reduce((sum, b) => sum + parseFloat(b.total), 0);
+        }
+        return 0;
+      } catch (e) {
+        console.error("Spot fetch error:", e);
+        return 0;
+      }
     }
 
-    sparkCtx.clearRect(0,0,sparkCanvas.width,sparkCanvas.height);
-    sparkCtx.beginPath();
-    for (let i = 0; i < points; i++) {
-      let x = i * (sparkCanvas.width / (points -1));
-      let y = sparkCanvas.height - ((balances[i] - startingBalance)/(vaultBalance-startingBalance+pnl/2)) * sparkCanvas.height;
-      if (i === 0) sparkCtx.moveTo(x,y);
-      else sparkCtx.lineTo(x,y);
+    async function fetchPerpData(address, dex = "") {
+      try {
+        const res = await fetch("https://api.hyperliquid.xyz/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "clearinghouseState", user: address, dex: dex })
+        });
+        const data = await res.json();
+        return data;
+      } catch (e) {
+        console.error("Perp fetch error:", e);
+        return null;
+      }
     }
-    sparkCtx.strokeStyle = "orange";
-    sparkCtx.lineWidth = 2;
-    sparkCtx.stroke();
-  }
 
-  drawSparkline();
-  
-  // ======== DISPLAY BALANCES ========
-  document.getElementById("vaultBalance").innerText = `$${vaultBalance.toFixed(2)}`;
-  document.getElementById("fastBalance").innerText = `$${(100).toFixed(2)}`; // example FAST balance
-  document.getElementById("pnl").innerText = `PnL: $${pnl.toFixed(2)}`;
+    async function fetchBalances() {
+      document.getElementById('fastBalance').textContent = "Loading...";
+      document.getElementById('vaultPerpBalance').textContent = "Loading...";
+      document.getElementById('vaultPnL').textContent = "Loading PnL...";
 
-  // ======== BACKGROUND FLOATING CANDLE LINES ========
-  const bgCanvas = document.getElementById("background");
-  bgCanvas.width = window.innerWidth;
-  bgCanvas.height = window.innerHeight;
-  const bgCtx = bgCanvas.getContext("2d");
+      // Fetch FAST spot and perp separately
+      const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
+        fetchSpotBalance(FAST_WALLET),
+        fetchPerpData(FAST_WALLET),
+        fetchPerpData(VAULT_WALLET),
+      ]);
 
-  const candlesticks = [];
-  const numCandles = 40;
-  for(let i=0;i<numCandles;i++){
-    candlesticks.push({
-      x: Math.random()*bgCanvas.width,
-      y: Math.random()*bgCanvas.height,
-      w: 2 + Math.random()*3,
-      h: 20 + Math.random()*40,
-      speedX: (Math.random()-0.5)*0.3,
-      speedY: (Math.random()-0.5)*0.3
-    });
-  }
+      // Calculate FAST perp balance
+      let fastPerp = 0;
+      if (fastPerpData && fastPerpData.marginSummary && fastPerpData.marginSummary.accountValue) {
+        fastPerp = parseFloat(fastPerpData.marginSummary.accountValue);
+      }
 
-  let mouseX = 0;
-  let mouseY = 0;
-  window.addEventListener("mousemove", e=>{
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
+      // Calculate Vault perp balance
+      let vaultPerp = 0;
+      let vaultPnL = 0;
+      if (vaultPerpData) {
+        if (vaultPerpData.marginSummary && vaultPerpData.marginSummary.accountValue) {
+          vaultPerp = parseFloat(vaultPerpData.marginSummary.accountValue);
+        }
+        if (vaultPerpData.assetPositions && Array.isArray(vaultPerpData.assetPositions)) {
+          vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos) => {
+            return acc + parseFloat(pos.position.unrealizedPnl || 0);
+          }, 0);
+        }
+      }
 
-  function animateBackground(){
-    bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-    bgCtx.strokeStyle = "rgba(255,165,0,0.4)";
-    bgCtx.lineWidth = 2;
+      const fastTotal = fastSpot + fastPerp;
 
-    candlesticks.forEach(c=>{
-      // shift slightly based on cursor
-      let dx = (mouseX - bgCanvas.width/2)/100;
-      let dy = (mouseY - bgCanvas.height/2)/100;
-      c.x += c.speedX + dx*0.05;
-      c.y += c.speedY + dy*0.05;
+      document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
+      document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
 
-      if(c.x<0) c.x = bgCanvas.width;
-      if(c.x>bgCanvas.width) c.x = 0;
-      if(c.y<0) c.y = bgCanvas.height;
-      if(c.y>bgCanvas.height) c.y = 0;
+      // Display Vault unrealized PnL in white, add + sign for positive
+      const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
+      const pnlColor = vaultPnL >= 0 ? "#0f0" : "#f00"; // green for profit, red for loss
+      const pnlElem = document.getElementById('vaultPnL');
+      pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
+      pnlElem.style.color = pnlColor;
+    }
 
-      // draw candle-like line
-      bgCtx.beginPath();
-      bgCtx.moveTo(c.x, c.y);
-      bgCtx.lineTo(c.x, c.y + c.h);
-      bgCtx.stroke();
+    fetchBalances();
+  </script>
 
-      // draw wick
-      bgCtx.beginPath();
-      bgCtx.moveTo(c.x + c.w/2, c.y - 5);
-      bgCtx.lineTo(c.x + c.w/2, c.y);
-      bgCtx.stroke();
-    });
-
-    requestAnimationFrame(animateBackground);
-  }
-  animateBackground();
-
-  // ======== HANDLE RESIZE ========
-  window.addEventListener("resize", ()=>{
-    bgCanvas.width = window.innerWidth;
-    bgCanvas.height = window.innerHeight;
-  });
-</script>
 </body>
 </html>

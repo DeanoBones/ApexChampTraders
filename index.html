@@ -216,14 +216,28 @@
     let fastPerp = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
     let vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
 
-    // Safely calculate vaultPnL
+    // Calculate vaultPnL safely
     let vaultPnL = 0;
     if (Array.isArray(vaultPerpData?.assetPositions)) {
-        vaultPnL = vaultPerpData.assetPositions.reduce(
-            (acc, pos) => acc + parseFloat(pos.position?.unrealizedPnl ?? 0),
-            0
-        );
+        vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos) => {
+            const pnl = parseFloat(pos?.position?.unrealizedPnl);
+            return acc + (isNaN(pnl) ? 0 : pnl);
+        }, 0);
     }
+
+    // Make sure vaultPnL is a number
+    vaultPnL = isNaN(vaultPnL) ? 0 : vaultPnL;
+
+    const fastTotal = Number(fastSpot) + Number(fastPerp);
+
+    document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
+    document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
+
+    const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
+    const pnlElem = document.getElementById('vaultPnL');
+    pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
+    pnlElem.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
+}
 
     const fastTotal = Number(fastSpot) + Number(fastPerp);
 

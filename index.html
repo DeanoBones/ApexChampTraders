@@ -2,36 +2,59 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ACT FAST Combined Balance</title>
+  <title>ACT FAST Full Balance</title>
+  <style>
+    body {
+      background: #000;
+      color: #ff6f00; /* neon orange */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 1.5rem;
+      text-shadow: 0 0 10px #ff6f00;
+    }
+    .balance {
+      font-size: 1.3rem;
+      margin: 1rem 0;
+      padding: 1rem;
+      border: 1px solid #ff6f00;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ff6f00;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
 </head>
 <body>
-  <h1>ACT FAST Combined Balance</h1>
-  <div>Vault Balance: <span id="vault-balance">Loading...</span></div>
-  <div>Spot & Perp Balance: <span id="spot-balance">Loading...</span></div>
-  <div>Total Balance: <span id="total-balance">Loading...</span></div>
+
+  <h1>ACT FAST Full Balance</h1>
+  <div class="balance">Vault Balance: <span id="vault">Loading...</span></div>
+  <div class="balance">Spot Balance: <span id="spot">Loading...</span></div>
+  <div class="balance">Perp Balance: <span id="perp">Loading...</span></div>
+  <div class="balance" style="font-weight: bold; font-size: 1.5rem;">
+    Total Balance: <span id="total">Loading...</span>
+  </div>
 
   <script>
-    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732"; // Replace with your wallet address
+    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732"; // <-- Replace with your wallet address
 
     async function fetchVaultBalance(address) {
       try {
         const res = await fetch("https://api.hyperliquid.xyz/info", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "vaultState",
-            user: address
-          })
+          body: JSON.stringify({ type: "vaultState", user: address })
         });
         const data = await res.json();
         if (data.vaults && data.vaults.length > 0) {
-          // Sum all vault values in USD
-          const totalVault = data.vaults.reduce((acc, v) => acc + parseFloat(v.valueUSD), 0);
-          return totalVault;
+          return data.vaults.reduce((sum, v) => sum + parseFloat(v.valueUSD), 0);
         }
         return 0;
       } catch (e) {
-        console.error("Error fetching vault balance:", e);
+        console.error("Vault fetch error:", e);
         return 0;
       }
     }
@@ -41,36 +64,53 @@
         const res = await fetch("https://api.hyperliquid.xyz/info", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "spotClearinghouseState",
-            user: address
-          })
+          body: JSON.stringify({ type: "spotClearinghouseState", user: address })
         });
         const data = await res.json();
         if (data.balances) {
-          // Sum total balances (spot + perp)
-          const totalSpot = data.balances.reduce((acc, b) => acc + parseFloat(b.total), 0);
-          return totalSpot;
+          return data.balances.reduce((sum, b) => sum + parseFloat(b.total), 0);
         }
         return 0;
       } catch (e) {
-        console.error("Error fetching spot balance:", e);
+        console.error("Spot fetch error:", e);
+        return 0;
+      }
+    }
+
+    async function fetchPerpBalance(address, dex = "") {
+      try {
+        const res = await fetch("https://api.hyperliquid.xyz/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "clearinghouseState", user: address, dex: dex })
+        });
+        const data = await res.json();
+        if (data.marginSummary && data.marginSummary.accountValue) {
+          return parseFloat(data.marginSummary.accountValue);
+        }
+        return 0;
+      } catch (e) {
+        console.error("Perp fetch error:", e);
         return 0;
       }
     }
 
     async function fetchAllBalances() {
-      document.getElementById('vault-balance').textContent = "Loading...";
-      document.getElementById('spot-balance').textContent = "Loading...";
-      document.getElementById('total-balance').textContent = "Loading...";
+      document.getElementById('vault').textContent = "Loading...";
+      document.getElementById('spot').textContent = "Loading...";
+      document.getElementById('perp').textContent = "Loading...";
+      document.getElementById('total').textContent = "Loading...";
 
       const vault = await fetchVaultBalance(FAST_WALLET);
       const spot = await fetchSpotBalance(FAST_WALLET);
-      const total = vault + spot;
+      const perp = await fetchPerpBalance(FAST_WALLET);
 
-      document.getElementById('vault-balance').textContent = vault.toFixed(4);
-      document.getElementById('spot-balance').textContent = spot.toFixed(4);
-      document.getElementById('total-balance').textContent = total.toFixed(4);
+      const total = vault + spot + perp;
+
+      document.getElementById('vault').textContent = vault.toFixed(4);
+      document.getElementById('spot').textContent = spot.toFixed(4);
+      document.getElementById('perp').textContent = perp.toFixed(4);
+      document.getElementById('total').textContent = total.toFixed(4);
     }
 
     fetchAllBalances();

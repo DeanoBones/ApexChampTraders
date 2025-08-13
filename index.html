@@ -118,21 +118,22 @@
             drawCandles();
 
             if (x - lastX >= 50 && e.movementX > 0) {
-                const mouseY = y;
-                const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY;
-                const openY = lastClose;
-                const closeY = mouseY;
-                const bodyHeight = Math.abs(closeY - openY);
-                const color = closeY < openY ? 'green' : 'red';
-                const topWickLength = Math.random() * 30 + 10; // Random top wick 10-40
-                const bottomWickLength = Math.random() * 30 + 10; // Random bottom wick 10-40
+    const mouseY = y;
+    const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY;
+    const openY = lastClose;
+    const closeY = mouseY;
+    const bodyHeight = Math.abs(closeY - openY);
+    const color = closeY < openY ? 'green' : 'red';
+    const topWickLength = Math.random() * 50; // Random top wick 0-50
+    const bottomWickLength = Math.random() * 50; // Random bottom wick 0-50
 
-                candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight: bodyHeight, color, topWickLength, bottomWickLength });
-                lastX = x;
-                totalLeftMovement = 0;
+    candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight: bodyHeight, color, topWickLength, bottomWickLength });
+    lastX = x;
+    totalLeftMovement = 0;
+}
             } else if (e.movementX < 0) {
                 totalLeftMovement += Math.abs(e.movementX);
-                if (totalLeftMovement >= 50 && candles.length > 0) {
+                if (totalLeftMovement >= 40 && candles.length > 0) {
                     candles.pop();
                     lastX = candles.length > 0 ? candles[candles.length - 1].x : -50;
                     totalLeftMovement = 0;

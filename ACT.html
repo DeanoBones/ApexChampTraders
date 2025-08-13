@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hyperliquid Spot Balance</title>
+</head>
+<body>
+  <h1>Hyperliquid Spot Balance</h1>
+  <pre id="output">Loading...</pre>
+
+  <script>
+    async function fetchSpotBalances() {
+      const res = await fetch("https://api.hyperliquid.xyz/info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "spotClearinghouseState",
+          user: "0xaDf7f82bF0D11b8056Ba98db37d75eA50ead9aab"
+        })
+      });
+      const data = await res.json();
+      if (data.balances) {
+        const formatted = data.balances.map(b => 
+          `${b.coin}: total = ${b.total}, hold = ${b.hold}`
+        ).join("\n");
+        document.getElementById("output").innerText = formatted;
+      } else {
+        document.getElementById("output").innerText = "Error fetching balances.";
+      }
+    }
+    fetchSpotBalances();
+  </script>
+</body>
+</html>

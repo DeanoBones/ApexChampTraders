@@ -202,18 +202,39 @@
         const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
         const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
 
-        async function fetchSpotBalance(address) {
-            try {
-                const res = await fetch("https://api.hyperliquid.xyz/info", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ type: "spotClearinghouseState", user: address })
-                });
-                const data = await res.json();
-                if (data.balances) return data.balances.reduce((sum, b) => sum + parseFloat(b.total), 0);
-                return 0;
-            } catch (e) { console.error("Spot fetch error:", e); return 0; }
-        }
+        async function fetchBalances() {
+    document.getElementById('fastBalance').textContent = "Loading...";
+    document.getElementById('vaultPerpBalance').textContent = "Loading...";
+    document.getElementById('vaultPnL').textContent = "Loading PnL...";
+
+    const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
+        fetchSpotBalance(FAST_WALLET),
+        fetchPerpData(FAST_WALLET),
+        fetchPerpData(VAULT_WALLET),
+    ]);
+
+    let fastPerp = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
+    let vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
+
+    // Safely calculate vaultPnL
+    let vaultPnL = 0;
+    if (Array.isArray(vaultPerpData?.assetPositions)) {
+        vaultPnL = vaultPerpData.assetPositions.reduce(
+            (acc, pos) => acc + parseFloat(pos.position?.unrealizedPnl ?? 0),
+            0
+        );
+    }
+
+    const fastTotal = Number(fastSpot) + Number(fastPerp);
+
+    document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
+    document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
+
+    const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
+    const pnlElem = document.getElementById('vaultPnL');
+    pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
+    pnlElem.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
+}
 
         async function fetchPerpData(address, dex = "") {
             try {

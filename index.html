@@ -16,6 +16,7 @@
         const canvas = document.getElementById('chartCanvas');
         const ctx = canvas.getContext('2d');
         let candles = [];
+        let lastX = -50; // Start off-screen to ensure first spawn
 
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -28,13 +29,16 @@
             // Draw existing candles
             drawCandles();
 
-            // Determine action based on cursor movement
-            if (e.movementX > 0) { // Moving right
-                const height = y < 200 ? 50 : -50; // Up for green, down for red
+            // Spawn new candle only if moved right by 50 pixels
+            if (x - lastX >= 50 && e.movementX > 0) {
+                const height = y - 200; // Follow mouse up/down from center (200)
                 const color = height > 0 ? 'green' : 'red';
-                candles.push({ x: x, height: Math.abs(height), color });
-            } else if (e.movementX < 0) { // Moving left
-                candles.pop(); // Remove last candle
+                const wickLength = Math.random() * 20 + 10; // Random wick length 10-30
+                candles.push({ x: x, height: Math.abs(height), color, wickLength });
+                lastX = x;
+            } else if (e.movementX < 0) { // Moving left deletes last candle
+                candles.pop();
+                lastX = candles.length > 0 ? candles[candles.length - 1].x : -50;
             }
 
             // Redraw updated candles
@@ -44,10 +48,12 @@
         function drawCandles() {
             candles.forEach(candle => {
                 ctx.fillStyle = candle.color;
-                ctx.fillRect(candle.x, 200 - candle.height / 2, 10, candle.height); // Body
+                ctx.fillRect(candle.x - 5, 200 - candle.height / 2, 10, candle.height); // Body
                 ctx.beginPath();
-                ctx.moveTo(candle.x + 5, 200 - candle.height); // Wick top
-                ctx.lineTo(candle.x + 5, 200 + candle.height); // Wick bottom
+                ctx.moveTo(candle.x, 200 - candle.height - candle.wickLength); // Top wick
+                ctx.lineTo(candle.x, 200 - candle.height / 2); // To body top
+                ctx.moveTo(candle.x, 200 + candle.height / 2); // From body bottom
+                ctx.lineTo(candle.x, 200 + candle.height + candle.wickLength); // Bottom wick
                 ctx.stroke();
             });
         }

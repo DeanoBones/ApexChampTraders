@@ -1,166 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>ACT FAST Balance Overview</title>
-  <style>
-    body {
-      background: #000;
-      color: #ff6f00;
-      font-family: "Microsoft Sans Serif", Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 2rem;
-    }
-    header {
-      background-color: #ff6f00;
-      padding: 1rem 0;
-      margin-bottom: 3rem;
-      box-shadow: 0 3px 8px rgba(255,111,0,0.7);
-    }
-    header h1 {
-      color: #000;
-      margin: 0;
-      font-weight: 900;
-      font-size: 2rem;
-      letter-spacing: 1.5px;
-    }
-    .balance {
-      font-size: 1.8rem;
-      margin: 1rem auto 0;
-      padding: 1rem;
-      border: 1px solid #ff6f00;
-      border-radius: 8px;
-      box-shadow: 0 0 15px #ff6f00;
-      max-width: 400px;
-      font-weight: 700;
-    }
-    .label {
-      font-weight: 900;
-      margin-bottom: 0.5rem;
-      font-size: 1.1rem;
-      text-align: center;
-      color: #ff6f00;
-    }
-    .description {
-      max-width: 420px;
-      margin: 0.5rem auto 2rem;
-      font-size: 1rem;
-      color: white;
-      font-weight: 500;
-    }
-    .pnl {
-      font-size: 1.3rem;
-      color: #fff;
-      margin-top: 0.5rem;
-      font-weight: 600;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Chart</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
 </head>
 <body>
+    <canvas id="chartCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+        let candles = [];
 
-  <header>
-    <h1>Apex Champ Traders</h1>
-  </header>
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-  <div class="balance">
-    <div class="label">ACT Balance</div>
-    <div id="vaultPerpBalance">Loading...</div>
-    <div id="vaultPnL" class="pnl">Loading PnL...</div>
-  </div>
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  <div class="balance" style="margin-top: 3rem; font-size: 1.5rem; font-weight: 600;">
-    <div class="label" style="color: #ff6f00;">ACT FAST Balance</div>
-    <div id="fastBalance">Loading...</div>
-  </div>
-  <div class="description">
-    Funded Asset Secured Treasury which is to be used in case of liquidation risk.
-  </div>
+            // Draw existing candles
+            drawCandles();
 
-  <script>
-    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
-    const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
+            // Determine action based on cursor movement
+            if (e.movementX > 0) { // Moving right
+                const height = y < 200 ? 50 : -50; // Up for green, down for red
+                const color = height > 0 ? 'green' : 'red';
+                candles.push({ x: x, height: Math.abs(height), color });
+            } else if (e.movementX < 0) { // Moving left
+                candles.pop(); // Remove last candle
+            }
 
-    async function fetchSpotBalance(address) {
-      try {
-        const res = await fetch("https://api.hyperliquid.xyz/info", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "spotClearinghouseState", user: address })
+            // Redraw updated candles
+            drawCandles();
         });
-        const data = await res.json();
-        if (data.balances) {
-          return data.balances.reduce((sum, b) => sum + parseFloat(b.total), 0);
+
+        function drawCandles() {
+            candles.forEach(candle => {
+                ctx.fillStyle = candle.color;
+                ctx.fillRect(candle.x, 200 - candle.height / 2, 10, candle.height); // Body
+                ctx.beginPath();
+                ctx.moveTo(candle.x + 5, 200 - candle.height); // Wick top
+                ctx.lineTo(candle.x + 5, 200 + candle.height); // Wick bottom
+                ctx.stroke();
+            });
         }
-        return 0;
-      } catch (e) {
-        console.error("Spot fetch error:", e);
-        return 0;
-      }
-    }
-
-    async function fetchPerpData(address, dex = "") {
-      try {
-        const res = await fetch("https://api.hyperliquid.xyz/info", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "clearinghouseState", user: address, dex: dex })
-        });
-        const data = await res.json();
-        return data;
-      } catch (e) {
-        console.error("Perp fetch error:", e);
-        return null;
-      }
-    }
-
-    async function fetchBalances() {
-      document.getElementById('fastBalance').textContent = "Loading...";
-      document.getElementById('vaultPerpBalance').textContent = "Loading...";
-      document.getElementById('vaultPnL').textContent = "Loading PnL...";
-
-      // Fetch FAST spot and perp separately
-      const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
-        fetchSpotBalance(FAST_WALLET),
-        fetchPerpData(FAST_WALLET),
-        fetchPerpData(VAULT_WALLET),
-      ]);
-
-      // Calculate FAST perp balance
-      let fastPerp = 0;
-      if (fastPerpData && fastPerpData.marginSummary && fastPerpData.marginSummary.accountValue) {
-        fastPerp = parseFloat(fastPerpData.marginSummary.accountValue);
-      }
-
-      // Calculate Vault perp balance
-      let vaultPerp = 0;
-      let vaultPnL = 0;
-      if (vaultPerpData) {
-        if (vaultPerpData.marginSummary && vaultPerpData.marginSummary.accountValue) {
-          vaultPerp = parseFloat(vaultPerpData.marginSummary.accountValue);
-        }
-        if (vaultPerpData.assetPositions && Array.isArray(vaultPerpData.assetPositions)) {
-          vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos) => {
-            return acc + parseFloat(pos.position.unrealizedPnl || 0);
-          }, 0);
-        }
-      }
-
-      const fastTotal = fastSpot + fastPerp;
-
-      document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
-      document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
-
-      // Display Vault unrealized PnL in white, add + sign for positive
-      const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
-      const pnlColor = vaultPnL >= 0 ? "#0f0" : "#f00"; // green for profit, red for loss
-      const pnlElem = document.getElementById('vaultPnL');
-      pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
-      pnlElem.style.color = pnlColor;
-    }
-
-    fetchBalances();
-  </script>
-
+    </script>
 </body>
 </html>

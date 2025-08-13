@@ -9,11 +9,22 @@
       color: #ff6f00; /* neon orange */
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       text-align: center;
+      margin: 0;
       padding: 2rem;
     }
-    h1 {
-      margin-bottom: 1.5rem;
-      text-shadow: 0 0 10px #ff6f00;
+    header {
+      background-color: #ff6f00; /* neon orange banner */
+      padding: 1rem 0;
+      margin-bottom: 2rem;
+      box-shadow: 0 3px 8px rgba(255,111,0,0.7);
+    }
+    header h1 {
+      color: #000; /* black text */
+      margin: 0;
+      font-weight: 900;
+      font-size: 2rem;
+      letter-spacing: 1.5px;
+      font-family: 'Segoe UI Black', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .balance {
       font-size: 1.3rem;
@@ -27,12 +38,15 @@
     .label {
       font-weight: bold;
       margin-bottom: 0.5rem;
+      text-align: left;
     }
   </style>
 </head>
 <body>
 
-  <h1>ACT FAST Balance Overview</h1>
+  <header>
+    <h1>Apex Champ Traders</h1>
+  </header>
 
   <div class="balance">
     <div class="label">FAST Wallet (Spot + Perp):</div>
@@ -42,10 +56,6 @@
   <div class="balance">
     <div class="label">Vault Wallet (Perp only):</div>
     <div id="vaultPerpBalance">Loading...</div>
-  </div>
-
-  <div class="balance" style="font-weight: bold; font-size: 1.5rem;">
-    Total Combined Balance: <span id="totalBalance">Loading...</span>
   </div>
 
   <script>
@@ -91,7 +101,6 @@
     async function fetchBalances() {
       document.getElementById('fastBalance').textContent = "Loading...";
       document.getElementById('vaultPerpBalance').textContent = "Loading...";
-      document.getElementById('totalBalance').textContent = "Loading...";
 
       const [fastSpot, fastPerp, vaultPerp] = await Promise.all([
         fetchSpotBalance(FAST_WALLET),
@@ -100,11 +109,9 @@
       ]);
 
       const fastTotal = fastSpot + fastPerp;
-      const total = fastTotal + vaultPerp;
 
       document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
       document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
-      document.getElementById('totalBalance').textContent = total.toFixed(4);
     }
 
     fetchBalances();

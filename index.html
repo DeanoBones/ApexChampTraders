@@ -1,292 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Champ Traders Dashboard</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Courier+New&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Apex Champ Traders Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Courier+New&display=swap');
 
-        body, html {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            color: #ff6f00;
-            font-family: "Courier New", monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-        }
+    :root { --orange:#ff6f00; }
 
-        header {
-            background-color: #ff6f00;
-            width: 100vw;  
-            text-align: center;
-            padding: 1rem 0;
-            font-family: "Roboto", sans-serif;
-            font-weight: 700;
-            font-size: 2rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 15px rgba(255, 111, 0, 0.5);
-        }
+    html, body {
+      margin:0; padding:0; min-height:100vh;
+      background:#000; color:var(--orange);
+      font-family:"Courier New", monospace;
+      display:flex; flex-direction:column; align-items:center;
+    }
 
-        header h1 {
-            color: #000;
-            margin: 0;
-        }
+    header{
+      background:var(--orange); width:100vw; text-align:center;
+      padding:1rem 0; box-shadow:0 4px 15px rgba(255,111,0,.5);
+    }
+    header h1{ margin:0; color:#000; font-family:"Roboto",sans-serif; text-transform:uppercase; letter-spacing:1px; }
 
-        .dashboard {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 2rem 1rem;
-            width: 100%;
-            max-width: 600px;
-            z-index: 10;
-        }
+    .dashboard{
+      width:100%; max-width:600px; padding:2rem 1rem; z-index:10;
+      display:flex; flex-direction:column; align-items:center;
+    }
 
-        .card {
-            width: 100%;
-            padding: 1.5rem;
-            border: 2px solid #ff6f00;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(255, 111, 0, 0.5);
-            background: rgba(0, 0, 0, 0.85);
-            margin-bottom: 1.5rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+    .card{
+      width:100%; margin-bottom:1.5rem; padding:1.5rem;
+      border:2px solid var(--orange); border-radius:12px;
+      background:rgba(0,0,0,.85);
+      box-shadow:0 0 15px rgba(255,111,0,.5);
+      transition:transform .2s, box-shadow .2s;
+    }
+    .card:hover{ transform:scale(1.03); box-shadow:0 0 30px var(--orange); }
 
-        .card:hover {
-            transform: scale(1.03);
-            box-shadow: 0 0 30px #ff6f00;
-        }
+    .label{
+      font-family:"Roboto",sans-serif; font-weight:700; text-transform:uppercase;
+      font-size:1.2rem; color:var(--orange); margin-bottom:.5rem;
+    }
+    .balance .value{ font-size:1.5rem; font-weight:600; margin-top:.25rem; }
+    .pnl{ font-size:1.4rem; font-weight:600; margin-top:.5rem; }
+    .pnl.green{ color:#0f0; } .pnl.red{ color:#f00; }
 
-        .label {
-            font-family: "Roboto", sans-serif;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            font-size: 1.2rem;
-            color: #ff6f00;
-            text-transform: uppercase;
-        }
+    .description{
+      margin-top:.75rem; font-size:.95rem; line-height:1.4; color:#ffcc80;
+    }
 
-        .balance #vaultPerpBalance,
-        .balance #fastBalance {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-top: 0.25rem;
-        }
-
-        .pnl {
-            font-size: 1.4rem;
-            margin-top: 0.5rem;
-            font-weight: 600;
-        }
-        .pnl.green { color: #0f0; }
-        .pnl.red { color: #f00; }
-
-        .description {
-            margin-top: 0.75rem;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            color: #ffcc80;
-        }
-
-        canvas {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 0;
-        }
-    </style>
+    canvas{
+      position:absolute; inset:0; width:100vw; height:100vh; z-index:0;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Apex Champ Traders</h1>
-    </header>
+  <header><h1>Apex Champ Traders</h1></header>
 
-    <div class="dashboard">
-        <div class="card balance">
-            <div class="label">Trading Account Balance</div>
-            <div id="vaultPerpBalance">Loading...</div>
-            <div id="vaultPnL" class="pnl">Loading PnL...</div>
-            <div class="description">
-                ACT is a professionally managed trading vault with huge upside potential with very little downside risk. Capital is strategically allocated to drive strong performance while protecting your assets.
-            </div>
-        </div>
-
-        <div class="card balance">
-            <div class="label">ACT FAST Reserve Fund</div>
-            <div id="fastBalance">Loading...</div>
-            <div class="description">
-                The ACT "FAST" (Financial Assets Secure Treasury) serves as a safety buffer to safeguard your portfolio against liquidation, providing stability and peace of mind for your trading assets.
-            </div>
-        </div>
+  <div class="dashboard">
+    <div class="card balance">
+      <div class="label">Trading Account Balance</div>
+      <div id="vaultPerpBalance" class="value">Loading...</div>
+      <div id="vaultPnL" class="pnl">Loading PnL...</div>
+      <div class="description">
+        ACT is a professionally managed trading vault with huge upside potential and very little downside risk. Capital is strategically allocated to drive strong performance while protecting your assets.
+      </div>
     </div>
 
-    <canvas id="chartCanvas"></canvas>
+    <div class="card balance">
+      <div class="label">ACT FAST Reserve Fund</div>
+      <div id="fastBalance" class="value">Loading...</div>
+      <div class="description">
+        The ACT "FAST" (Financial Assets Secure Treasury) serves as a safety buffer to safeguard your portfolio against liquidation, providing stability and peace of mind for your trading assets.
+      </div>
+    </div>
+  </div>
 
-    <script>
-        const canvas = document.getElementById('chartCanvas');
-        const ctx = canvas.getContext('2d');
-        let candles = [];
-        let lastX = -50;
-        let totalLeftMovement = 0;
+  <canvas id="chartCanvas"></canvas>
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        let centerY = canvas.height / 2;
+  <script>
+    // ---------- Background candlesticks ----------
+    const canvas = document.getElementById('chartCanvas');
+    const ctx = canvas.getContext('2d');
+    let candles = [];
+    let lastX = -50;
+    let totalLeftMovement = 0;
 
-        document.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+    function resizeCanvas(){
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawCandles();
+    document.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-            if (x - lastX >= 50 && e.movementX > 0) {
-                const mouseY = y;
-                const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY;
-                const openY = lastClose;
-                const closeY = mouseY;
-                const bodyHeight = Math.abs(closeY - openY);
-                const color = closeY < openY ? 'green' : 'red';
-                const topWickLength = Math.random() * 50;
-                const bottomWickLength = Math.random() * 50;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawCandles();
 
-                candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight, color, topWickLength, bottomWickLength });
-                lastX = x;
-                totalLeftMovement = 0;
-            } else if (e.movementX < 0) {
-                totalLeftMovement += Math.abs(e.movementX);
-                if (totalLeftMovement >= 40 && candles.length > 0) {
-                    candles.pop();
-                    lastX = candles.length > 0 ? candles[candles.length - 1].x : -50;
-                    totalLeftMovement = 0;
-                }
-            }
-
-            drawCandles();
-        });
-
-        function drawCandles() {
-            ctx.globalAlpha = 0.5;
-            candles.forEach(candle => {
-                ctx.fillStyle = candle.color;
-                const bodyTop = Math.min(candle.openY, candle.closeY);
-                ctx.fillRect(candle.x - 5, bodyTop, 10, candle.bodyHeight);
-                ctx.strokeStyle = candle.color;
-                ctx.beginPath();
-                ctx.moveTo(candle.x, bodyTop - candle.topWickLength);
-                ctx.lineTo(candle.x, bodyTop);
-                ctx.moveTo(candle.x, bodyTop + candle.bodyHeight);
-                ctx.lineTo(candle.x, bodyTop + candle.bodyHeight + candle.bottomWickLength);
-                ctx.stroke();
-            });
-            ctx.globalAlpha = 1.0;
-            ctx.strokeStyle = '#fff';
+      if (x - lastX >= 50 && e.movementX > 0) {
+        const lastClose = candles.length ? candles[candles.length - 1].closeY : (canvas.height/2);
+        const openY = lastClose;
+        const closeY = y;
+        const bodyHeight = Math.abs(closeY - openY);
+        const color = closeY < openY ? 'green' : 'red';
+        const topWickLength = Math.random()*50;
+        const bottomWickLength = Math.random()*50;
+        candles.push({ x, openY, closeY, bodyHeight, color, topWickLength, bottomWickLength });
+        lastX = x;
+        totalLeftMovement = 0;
+      } else if (e.movementX < 0) {
+        totalLeftMovement += Math.abs(e.movementX);
+        if (totalLeftMovement >= 40 && candles.length) {
+          candles.pop();
+          lastX = candles.length ? candles[candles.length - 1].x : -50;
+          totalLeftMovement = 0;
         }
+      }
 
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            centerY = canvas.height / 2;
+      drawCandles();
+    });
+
+    function drawCandles(){
+      ctx.globalAlpha = 0.5;
+      for (const c of candles){
+        ctx.fillStyle = c.color;
+        const bodyTop = Math.min(c.openY, c.closeY);
+        ctx.fillRect(c.x - 5, bodyTop, 10, c.bodyHeight);
+        ctx.strokeStyle = c.color;
+        ctx.beginPath();
+        ctx.moveTo(c.x, bodyTop - c.topWickLength);
+        ctx.lineTo(c.x, bodyTop);
+        ctx.moveTo(c.x, bodyTop + c.bodyHeight);
+        ctx.lineTo(c.x, bodyTop + c.bodyHeight + c.bottomWickLength);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ---------- Replace with your real 0x addresses (no spaces) ----------
+    const FAST_WALLET  = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
+    const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
+
+    // ---------- API helpers ----------
+    async function fetchSpotBalance(address){
+      try{
+        const res = await fetch("https://api.hyperliquid.xyz/info", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ type:"spotClearinghouseState", user: address })
         });
+        const data = await res.json();
+        if (Array.isArray(data?.balances)){
+          return data.balances.reduce((sum,b)=> sum + (parseFloat(b.total)||0), 0);
+        }
+      }catch(err){
+        console.error("Spot fetch error:", err);
+      }
+      return 0;
+    }
 
-        const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
-        const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
+    async function fetchPerpData(address, dex=""){
+      try{
+        const res = await fetch("https://api.hyperliquid.xyz/info", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ type:"clearinghouseState", user: address, dex })
+        });
+        return await res.json();
+      }catch(err){
+        console.error("Perp fetch error:", err);
+        return null;
+      }
+    }
 
-        async function fetchBalances() {
-    document.getElementById('fastBalance').textContent = "Loading...";
-    document.getElementById('vaultPerpBalance').textContent = "Loading...";
-    document.getElementById('vaultPnL').textContent = "Loading PnL...";
+    // ---------- Main updater ----------
+    async function fetchBalances(){
+      const fastEl   = document.getElementById('fastBalance');
+      const vaultEl  = document.getElementById('vaultPerpBalance');
+      const pnlEl    = document.getElementById('vaultPnL');
 
-    const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
+      fastEl.textContent  = "Loading...";
+      vaultEl.textContent = "Loading...";
+      pnlEl.textContent   = "Loading PnL...";
+
+      const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
         fetchSpotBalance(FAST_WALLET),
         fetchPerpData(FAST_WALLET),
         fetchPerpData(VAULT_WALLET),
-    ]);
+      ]);
 
-    let fastPerp = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
-    let vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
+      // Parse numbers safely
+      const fastPerp  = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
+      const vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
 
-    // Calculate vaultPnL safely
-    let vaultPnL = 0;
-    if (Array.isArray(vaultPerpData?.assetPositions)) {
-        vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos) => {
-            const pnl = parseFloat(pos?.position?.unrealizedPnl);
-            return acc + (isNaN(pnl) ? 0 : pnl);
+      // Sum unrealized PnL across open positions (if any)
+      let vaultPnL = 0;
+      if (Array.isArray(vaultPerpData?.assetPositions)){
+        vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos)=>{
+          const pnl = parseFloat(pos?.position?.unrealizedPnl);
+          return acc + (isNaN(pnl) ? 0 : pnl);
         }, 0);
+      }
+      vaultPnL = isNaN(vaultPnL) ? 0 : vaultPnL;
+
+      const fastTotal = Number(fastSpot) + Number(fastPerp);
+
+      // Update UI
+      fastEl.textContent  = fastTotal.toFixed(4);
+      vaultEl.textContent = vaultPerp.toFixed(4);
+
+      const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
+      pnlEl.textContent = `Unrealized PnL: ${pnlText}`;
+      pnlEl.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
+
+      // Optional debug
+      // console.log({ fastSpot, fastPerpData, vaultPerpData, fastPerp, vaultPerp, vaultPnL });
     }
 
-    // Make sure vaultPnL is a number
-    vaultPnL = isNaN(vaultPnL) ? 0 : vaultPnL;
-
-    const fastTotal = Number(fastSpot) + Number(fastPerp);
-
-    document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
-    document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
-
-    const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
-    const pnlElem = document.getElementById('vaultPnL');
-    pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
-    pnlElem.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
-}
-
-    const fastTotal = Number(fastSpot) + Number(fastPerp);
-
-    document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
-    document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
-
-    const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
-    const pnlElem = document.getElementById('vaultPnL');
-    pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
-    pnlElem.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
-}
-
-        async function fetchPerpData(address, dex = "") {
-            try {
-                const res = await fetch("https://api.hyperliquid.xyz/info", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ type: "clearinghouseState", user: address, dex })
-                });
-                return await res.json();
-            } catch (e) { console.error("Perp fetch error:", e); return null; }
-        }
-
-        async function fetchBalances() {
-            document.getElementById('fastBalance').textContent = "Loading...";
-            document.getElementById('vaultPerpBalance').textContent = "Loading...";
-            document.getElementById('vaultPnL').textContent = "Loading PnL...";
-
-            const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
-                fetchSpotBalance(FAST_WALLET),
-                fetchPerpData(FAST_WALLET),
-                fetchPerpData(VAULT_WALLET),
-            ]);
-
-            let fastPerp = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
-let vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
-const fastTotal = fastSpot + fastPerp;
-
-
-            document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
-            document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
-
-            const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
-            const pnlElem = document.getElementById('vaultPnL');
-            pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
-            pnlElem.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
-        }
-
-        fetchBalances();
-    </script>
+    fetchBalances();
+    // Optionally refresh every 60s:
+    // setInterval(fetchBalances, 60000);
+  </script>
 </body>
 </html>

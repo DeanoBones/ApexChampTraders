@@ -6,20 +6,20 @@
   <style>
     body {
       background: #000;
-      color: #ff6f00; /* neon orange for balances */
+      color: #ff6f00;
       font-family: "Microsoft Sans Serif", Arial, sans-serif;
       text-align: center;
       margin: 0;
       padding: 2rem;
     }
     header {
-      background-color: #ff6f00; /* neon orange banner */
+      background-color: #ff6f00;
       padding: 1rem 0;
       margin-bottom: 3rem;
       box-shadow: 0 3px 8px rgba(255,111,0,0.7);
     }
     header h1 {
-      color: #000; /* black text */
+      color: #000;
       margin: 0;
       font-weight: 900;
       font-size: 2rem;
@@ -49,6 +49,12 @@
       color: white;
       font-weight: 500;
     }
+    .pnl {
+      font-size: 1.3rem;
+      color: #fff;
+      margin-top: 0.5rem;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -60,6 +66,7 @@
   <div class="balance">
     <div class="label">ACT Balance (Vault Wallet - Perp only)</div>
     <div id="vaultPerpBalance">Loading...</div>
+    <div id="vaultPnL" class="pnl">Loading PnL...</div>
   </div>
 
   <div class="balance" style="margin-top: 3rem; font-size: 1.5rem; font-weight: 600;">
@@ -92,7 +99,7 @@
       }
     }
 
-    async function fetchPerpBalance(address, dex = "") {
+    async function fetchPerpData(address, dex = "") {
       try {
         const res = await fetch("https://api.hyperliquid.xyz/info", {
           method: "POST",
@@ -100,30 +107,56 @@
           body: JSON.stringify({ type: "clearinghouseState", user: address, dex: dex })
         });
         const data = await res.json();
-        if (data.marginSummary && data.marginSummary.accountValue) {
-          return parseFloat(data.marginSummary.accountValue);
-        }
-        return 0;
+        return data;
       } catch (e) {
         console.error("Perp fetch error:", e);
-        return 0;
+        return null;
       }
     }
 
     async function fetchBalances() {
       document.getElementById('fastBalance').textContent = "Loading...";
       document.getElementById('vaultPerpBalance').textContent = "Loading...";
+      document.getElementById('vaultPnL').textContent = "Loading PnL...";
 
-      const [fastSpot, fastPerp, vaultPerp] = await Promise.all([
+      // Fetch FAST spot and perp separately
+      const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
         fetchSpotBalance(FAST_WALLET),
-        fetchPerpBalance(FAST_WALLET),
-        fetchPerpBalance(VAULT_WALLET),
+        fetchPerpData(FAST_WALLET),
+        fetchPerpData(VAULT_WALLET),
       ]);
+
+      // Calculate FAST perp balance
+      let fastPerp = 0;
+      if (fastPerpData && fastPerpData.marginSummary && fastPerpData.marginSummary.accountValue) {
+        fastPerp = parseFloat(fastPerpData.marginSummary.accountValue);
+      }
+
+      // Calculate Vault perp balance
+      let vaultPerp = 0;
+      let vaultPnL = 0;
+      if (vaultPerpData) {
+        if (vaultPerpData.marginSummary && vaultPerpData.marginSummary.accountValue) {
+          vaultPerp = parseFloat(vaultPerpData.marginSummary.accountValue);
+        }
+        if (vaultPerpData.assetPositions && Array.isArray(vaultPerpData.assetPositions)) {
+          vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos) => {
+            return acc + parseFloat(pos.position.unrealizedPnl || 0);
+          }, 0);
+        }
+      }
 
       const fastTotal = fastSpot + fastPerp;
 
       document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
       document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
+
+      // Display Vault unrealized PnL in white, add + sign for positive
+      const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
+      const pnlColor = vaultPnL >= 0 ? "#0f0" : "#f00"; // green for profit, red for loss
+      const pnlElem = document.getElementById('vaultPnL');
+      pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
+      pnlElem.style.color = pnlColor;
     }
 
     fetchBalances();

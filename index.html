@@ -209,12 +209,12 @@
       const fastTotal = Number(fastSpot) + Number(fastPerp);
 
       // Update UI
-      fastEl.textContent  = fastTotal.toFixed(4);
-      vaultEl.textContent = vaultPerp.toFixed(4);
+      fastEl.textContent  = `$${fastTotal.toFixed(4)}`;
+vaultEl.textContent = `$${vaultPerp.toFixed(4)}`;
 
-      const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
-      pnlEl.textContent = `Unrealized PnL: ${pnlText}`;
-      pnlEl.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
+const pnlText = (vaultPnL >= 0 ? "+" : "") + `$${vaultPnL.toFixed(4)}`;
+pnlEl.textContent = `Unrealized PnL: ${pnlText}`;
+pnlEl.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
 
       // Optional debug
       // console.log({ fastSpot, fastPerpData, vaultPerpData, fastPerp, vaultPerp, vaultPnL });

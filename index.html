@@ -199,8 +199,8 @@
             centerY = canvas.height / 2;
         });
 
-        const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
-        const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
+        const FAST_WALLET = "0xYourFastWalletAddressHere";
+        const VAULT_WALLET = "0xYourVaultWalletAddressHere";
 
         async function fetchSpotBalance(address) {
             try {
@@ -237,11 +237,10 @@
                 fetchPerpData(VAULT_WALLET),
             ]);
 
-            let fastPerp = fastPerpData?.marginSummary?.accountValue || 0;
-            let vaultPerp = vaultPerpData?.marginSummary?.accountValue || 0;
+            let fastPerp = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
+let vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
+const fastTotal = fastSpot + fastPerp;
 
-            let vaultPnL = vaultPerpData?.assetPositions?.reduce((acc, pos) => acc + parseFloat(pos.position.unrealizedPnl || 0), 0) || 0;
-            const fastTotal = fastSpot + fastPerp;
 
             document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
             document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);

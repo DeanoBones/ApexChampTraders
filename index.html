@@ -1,34 +1,337 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Hyperliquid Spot Balance</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ACT Apex Champ Traders</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+    margin: 0; padding: 0;
+  }
+  body, html {
+    height: 100%;
+    background: #000000;
+    color: #FF6F00;
+    font-family: 'Montserrat', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Container for everything */
+  #app {
+    position: relative;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    perspective: 1000px;
+    overflow: hidden;
+  }
+
+  h1 {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    text-shadow: 0 0 8px #FF6F00;
+    letter-spacing: 0.1em;
+  }
+
+  /* Panels container */
+  .panels {
+    display: flex;
+    gap: 3rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Single panel style */
+  .panel {
+    background: rgba(20,20,20,0.6);
+    border: 2px solid #FF6F00;
+    border-radius: 15px;
+    box-shadow:
+      0 0 15px #FF6F00,
+      inset 0 0 10px #FF6F00;
+    width: 300px;
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #FF6F00;
+    font-weight: 700;
+    font-size: 2rem;
+    transition: box-shadow 0.3s ease;
+    will-change: transform;
+    cursor: default;
+  }
+
+  .panel:hover {
+    box-shadow:
+      0 0 25px #FFA040,
+      inset 0 0 20px #FFA040;
+  }
+
+  .label {
+    font-size: 1.2rem;
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+  }
+
+  .balance {
+    font-size: 2.8rem;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Info text below panels */
+  #info-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-align: center;
+    max-width: 600px;
+    margin-bottom: 2rem;
+    color: #FF8C00;
+    text-shadow: 0 0 4px #FF8C00;
+  }
+
+  /* Refresh button */
+  #refresh-btn {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    background: #FF6F00;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 0 10px #FF6F00;
+    cursor: pointer;
+    color: black;
+    font-weight: 900;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow 0.3s ease;
+  }
+
+  #refresh-btn:hover {
+    box-shadow: 0 0 25px #FFA040;
+  }
+
+  /* Spinner animation for refresh */
+  #refresh-btn.loading {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg);}
+    to { transform: rotate(360deg);}
+  }
+
+  /* Background canvas for trading chart */
+  #chart-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    filter: brightness(0.3);
+  }
+</style>
 </head>
 <body>
-  <h1>Hyperliquid Spot Balance</h1>
-  <pre id="output">Loading...</pre>
+<div id="app">
+  <h1>ACT Apex Champ Traders</h1>
+  <div class="panels">
+    <div class="panel" id="vault-panel" data-depth="0.05">
+      <div class="label">Vault Balance</div>
+      <div class="balance" id="vault-balance">--</div>
+    </div>
+    <div class="panel" id="fast-panel" data-depth="0.08">
+      <div class="label">ACT FAST Balance</div>
+      <div class="balance" id="fast-balance">--</div>
+    </div>
+  </div>
+  <div id="info-text">ACT FAST protects your Vault from liquidations.</div>
+  <button id="refresh-btn" title="Refresh Balances">&#x21bb;</button>
+</div>
 
-  <script>
-    async function fetchSpotBalances() {
+<canvas id="chart-bg"></canvas>
+
+<script>
+  // Placeholder wallet addresses - replace these with your real addresses!
+  const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
+  const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
+
+  const vaultBalanceEl = document.getElementById('vault-balance');
+  const fastBalanceEl = document.getElementById('fast-balance');
+  const refreshBtn = document.getElementById('refresh-btn');
+
+  // Count-up animation for numbers
+  function animateCountUp(el, start, end, duration = 1500) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const current = start + (end - start) * progress;
+      el.textContent = current.toFixed(4);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = end.toFixed(4);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // Fetch Vault balance from Hyperliquid API
+  async function fetchVaultBalance(address) {
+    try {
+      const res = await fetch("https://api.hyperliquid.xyz/info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "vaultState",
+          user: address
+        })
+      });
+      const data = await res.json();
+      if (data.vaults && data.vaults.length > 0) {
+        // Sum the valueUSD from all vaults for total vault value
+        const totalValue = data.vaults.reduce((acc, v) => acc + parseFloat(v.valueUSD), 0);
+        return totalValue;
+      }
+      return 0;
+    } catch (e) {
+      console.error("Error fetching Vault balance:", e);
+      return 0;
+    }
+  }
+
+  // Fetch FAST balance from Hyperliquid API (spot balances)
+  async function fetchFastBalance(address) {
+    try {
       const res = await fetch("https://api.hyperliquid.xyz/info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "spotClearinghouseState",
-          user: "0xaDf7f82bF0D11b8056Ba98db37d75eA50ead9aab"
+          user: address
         })
       });
       const data = await res.json();
-      if (data.balances) {
-        const formatted = data.balances.map(b => 
-          `${b.coin}: total = ${b.total}, hold = ${b.hold}`
-        ).join("\n");
-        document.getElementById("output").innerText = formatted;
-      } else {
-        document.getElementById("output").innerText = "Error fetching balances.";
+      if (data.balances && data.balances.length > 0) {
+        // Sum all balances tokens for total FAST balance
+        // Or filter by specific coin if needed (e.g., "HYPE")
+        const totalTokens = data.balances.reduce((acc, b) => acc + parseFloat(b.total), 0);
+        return totalTokens;
       }
+      return 0;
+    } catch (e) {
+      console.error("Error fetching FAST balance:", e);
+      return 0;
     }
-    fetchSpotBalances();
-  </script>
+  }
+
+  // Update balances and animate
+  async function updateBalances() {
+    refreshBtn.classList.add('loading');
+    const vaultValue = await fetchVaultBalance(VAULT_WALLET);
+    animateCountUp(vaultBalanceEl, 0, vaultValue);
+
+    const fastValue = await fetchFastBalance(FAST_WALLET);
+    animateCountUp(fastBalanceEl, 0, fastValue);
+    refreshBtn.classList.remove('loading');
+  }
+
+  // Initial load
+  updateBalances();
+
+  // Refresh button
+  refreshBtn.addEventListener('click', () => {
+    updateBalances();
+  });
+
+  // Cursor parallax effect
+  const app = document.getElementById('app');
+  const panels = document.querySelectorAll('.panel');
+
+  app.addEventListener('mousemove', (e) => {
+    const { width, height } = app.getBoundingClientRect();
+    const x = e.clientX - width / 2;
+    const y = e.clientY - height / 2;
+
+    panels.forEach(panel => {
+      const depth = parseFloat(panel.dataset.depth);
+      const moveX = (x * depth);
+      const moveY = (y * depth);
+      panel.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+    });
+  });
+
+  app.addEventListener('mouseleave', () => {
+    panels.forEach(panel => {
+      panel.style.transform = `translate3d(0, 0, 0)`;
+    });
+  });
+
+  // Background trading chart animation (simple sine wave line)
+
+  const canvas = document.getElementById('chart-bg');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let time = 0;
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function drawChart() {
+    ctx.clearRect(0, 0, width, height);
+
+    // Background glow effect
+    const gradient = ctx.createLinearGradient(0, height * 0.7, width, height * 0.3);
+    gradient.addColorStop(0, 'rgba(255,111,0, 0.15)');
+    gradient.addColorStop(1, 'rgba(255,111,0, 0.05)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#FF6F00';
+    ctx.shadowColor = '#FF6F00';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+
+    const amplitude = 40;
+    const frequency = 0.005;
+    const speed = 0.02;
+
+    for (let x = 0; x <= width; x += 2) {
+      const y = height/2 + Math.sin(x * frequency + time) * amplitude;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    time += speed;
+    requestAnimationFrame(drawChart);
+  }
+  drawChart();
+</script>
 </body>
 </html>

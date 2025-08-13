@@ -5,18 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Candlestick Chart</title>
     <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
         canvas {
             border: 1px solid black;
+            width: 100vw;
+            height: 100vh;
         }
     </style>
 </head>
 <body>
-    <canvas id="chartCanvas" width="800" height="400"></canvas>
+    <canvas id="chartCanvas"></canvas>
     <script>
         const canvas = document.getElementById('chartCanvas');
         const ctx = canvas.getContext('2d');
         let candles = [];
         let lastX = -50;
+
+        // Set canvas size to full window
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const centerY = canvas.height / 2;
 
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -32,9 +44,10 @@
             // Spawn new candle only if moved right by 50 pixels
             if (x - lastX >= 50 && e.movementX > 0) {
                 const mouseY = y; // Capture mouse y-position
-                const isUp = mouseY < 200; // Above center is up
-                const closeY = mouseY; // Close price at mouse position
-                const openY = 200; // Open price at center
+                const isUp = mouseY < (candles.length > 0 ? candles[candles.length - 1].closeY : centerY); // Compare with last close
+                const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY; // Initial open at center
+                const openY = lastClose; // Open at previous close
+                const closeY = mouseY; // Close at mouse position
                 const bodyHeight = Math.abs(closeY - openY);
                 const color = isUp ? 'green' : 'red';
                 const wickLength = Math.random() * 20 + 10; // Random wick 10-30
@@ -53,7 +66,7 @@
         function drawCandles() {
             candles.forEach(candle => {
                 ctx.fillStyle = candle.color;
-                const bodyTop = candle.closeY < candle.openY ? candle.closeY : candle.openY;
+                const bodyTop = Math.min(candle.openY, candle.closeY);
                 ctx.fillRect(candle.x - 5, bodyTop, 10, candle.bodyHeight); // Body
                 ctx.beginPath();
                 ctx.moveTo(candle.x, bodyTop - (candle.closeY < candle.openY ? candle.wickLength : 0)); // Top wick start
@@ -63,6 +76,13 @@
                 ctx.stroke();
             });
         }
+
+        // Resize canvas on window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            centerY = canvas.height / 2;
+        });
     </script>
 </body>
 </html>

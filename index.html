@@ -1,139 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ACT Apex Champ Traders - ACT FAST Balance</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-
-  body, html {
-    margin: 0; padding: 0;
-    height: 100%;
-    background: #000;
-    font-family: 'Montserrat', sans-serif;
-    color: #FF6F00;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    user-select: none;
-  }
-
-  #container {
-    background: rgba(30,30,30,0.7);
-    border: 2px solid #FF6F00;
-    border-radius: 16px;
-    box-shadow:
-      0 0 15px #FF6F00,
-      inset 0 0 25px #FF6F00;
-    padding: 3rem 4rem;
-    text-align: center;
-    width: 320px;
-  }
-
-  h1 {
-    font-size: 2.4rem;
-    margin-bottom: 1rem;
-    text-shadow: 0 0 12px #FF6F00;
-    letter-spacing: 0.1em;
-  }
-
-  #balance {
-    font-size: 4rem;
-    font-feature-settings: "tnum";
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    margin: 1rem 0;
-    animation: pulseGlow 2.5s ease-in-out infinite;
-    text-shadow:
-      0 0 10px #FF6F00,
-      0 0 20px #FF6F00,
-      0 0 40px #FFA040;
-  }
-
-  @keyframes pulseGlow {
-    0%, 100% {
-      text-shadow:
-        0 0 10px #FF6F00,
-        0 0 20px #FF6F00,
-        0 0 40px #FFA040;
-    }
-    50% {
-      text-shadow:
-        0 0 15px #FF8C00,
-        0 0 30px #FF8C00,
-        0 0 60px #FFB050;
-    }
-  }
-
-  #info-text {
-    color: #FF8C00;
-    font-weight: 500;
-    margin-bottom: 2rem;
-  }
-
-  #refresh-btn {
-    background: #FF6F00;
-    border: none;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    font-size: 1.8rem;
-    font-weight: 900;
-    color: black;
-    cursor: pointer;
-    box-shadow: 0 0 15px #FF6F00;
-    transition: box-shadow 0.3s ease;
-  }
-  #refresh-btn:hover {
-    box-shadow: 0 0 30px #FFA040;
-  }
-  #refresh-btn:active {
-    transform: scale(0.9);
-  }
-
-  #refresh-btn.loading {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from { transform: rotate(0deg);}
-    to { transform: rotate(360deg);}
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>ACT FAST Balance Test</title>
 </head>
 <body>
-  <div id="container">
-    <h1>ACT FAST Balance</h1>
-    <div id="balance">--</div>
-    <div id="info-text">Protecting your Vault from liquidations.</div>
-    <button id="refresh-btn" title="Refresh Balance">&#x21bb;</button>
-  </div>
+  <h1>ACT FAST Balance</h1>
+  <div id="balance">Loading...</div>
 
   <script>
-    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732"; // Replace with your real address
-    const balanceEl = document.getElementById('balance');
-    const refreshBtn = document.getElementById('refresh-btn');
-
-    function animateCountUp(el, start, end, duration = 1500) {
-      let startTimestamp = null;
-      const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        const current = start + (end - start) * progress;
-        el.textContent = current.toFixed(4);
-        if (progress < 1) {
-          requestAnimationFrame(step);
-        } else {
-          el.textContent = end.toFixed(4);
-        }
-      };
-      requestAnimationFrame(step);
-    }
+    const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732"; // Replace with your wallet address
 
     async function fetchFastBalance(address) {
       try {
-        refreshBtn.classList.add('loading');
         const res = await fetch("https://api.hyperliquid.xyz/info", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -145,23 +24,16 @@
         const data = await res.json();
         if (data.balances) {
           const total = data.balances.reduce((acc, b) => acc + parseFloat(b.total), 0);
-          animateCountUp(balanceEl, 0, total);
+          document.getElementById("balance").textContent = total.toFixed(4);
         } else {
-          balanceEl.textContent = "0.0000";
+          document.getElementById("balance").textContent = "0.0000";
         }
       } catch (e) {
         console.error("Error fetching FAST balance:", e);
-        balanceEl.textContent = "Error";
-      } finally {
-        refreshBtn.classList.remove('loading');
+        document.getElementById("balance").textContent = "Error";
       }
     }
 
-    refreshBtn.addEventListener('click', () => {
-      fetchFastBalance(FAST_WALLET);
-    });
-
-    // Load on page load
     fetchFastBalance(FAST_WALLET);
   </script>
 </body>

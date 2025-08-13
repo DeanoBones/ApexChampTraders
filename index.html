@@ -2,16 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ACT FAST Balance Test</title>
+  <title>ACT FAST Combined Balance</title>
 </head>
 <body>
-  <h1>ACT FAST Balance</h1>
-  <div id="balance">Loading...</div>
+  <h1>ACT FAST Combined Balance</h1>
+  <div>Vault Balance: <span id="vault-balance">Loading...</span></div>
+  <div>Spot & Perp Balance: <span id="spot-balance">Loading...</span></div>
+  <div>Total Balance: <span id="total-balance">Loading...</span></div>
 
   <script>
     const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732"; // Replace with your wallet address
 
-    async function fetchFastBalance(address) {
+    async function fetchVaultBalance(address) {
+      try {
+        const res = await fetch("https://api.hyperliquid.xyz/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "vaultState",
+            user: address
+          })
+        });
+        const data = await res.json();
+        if (data.vaults && data.vaults.length > 0) {
+          // Sum all vault values in USD
+          const totalVault = data.vaults.reduce((acc, v) => acc + parseFloat(v.valueUSD), 0);
+          return totalVault;
+        }
+        return 0;
+      } catch (e) {
+        console.error("Error fetching vault balance:", e);
+        return 0;
+      }
+    }
+
+    async function fetchSpotBalance(address) {
       try {
         const res = await fetch("https://api.hyperliquid.xyz/info", {
           method: "POST",
@@ -23,18 +48,32 @@
         });
         const data = await res.json();
         if (data.balances) {
-          const total = data.balances.reduce((acc, b) => acc + parseFloat(b.total), 0);
-          document.getElementById("balance").textContent = total.toFixed(4);
-        } else {
-          document.getElementById("balance").textContent = "0.0000";
+          // Sum total balances (spot + perp)
+          const totalSpot = data.balances.reduce((acc, b) => acc + parseFloat(b.total), 0);
+          return totalSpot;
         }
+        return 0;
       } catch (e) {
-        console.error("Error fetching FAST balance:", e);
-        document.getElementById("balance").textContent = "Error";
+        console.error("Error fetching spot balance:", e);
+        return 0;
       }
     }
 
-    fetchFastBalance(FAST_WALLET);
+    async function fetchAllBalances() {
+      document.getElementById('vault-balance').textContent = "Loading...";
+      document.getElementById('spot-balance').textContent = "Loading...";
+      document.getElementById('total-balance').textContent = "Loading...";
+
+      const vault = await fetchVaultBalance(FAST_WALLET);
+      const spot = await fetchSpotBalance(FAST_WALLET);
+      const total = vault + spot;
+
+      document.getElementById('vault-balance').textContent = vault.toFixed(4);
+      document.getElementById('spot-balance').textContent = spot.toFixed(4);
+      document.getElementById('total-balance').textContent = total.toFixed(4);
+    }
+
+    fetchAllBalances();
   </script>
 </body>
 </html>

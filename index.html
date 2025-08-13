@@ -3,28 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Candlestick Chart</title>
+    <title>ACT FAST Balance Overview</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             overflow: hidden;
+            background: #000;
+            color: #ff6f00;
+            font-family: "Microsoft Sans Serif", Arial, sans-serif;
+        }
+        header {
+            background-color: #ff6f00;
+            padding: 1rem 0;
+            margin-bottom: 3rem;
+            box-shadow: 0 3px 8px rgba(255,111,0,0.7);
+            position: absolute;
+            width: 100%;
+            top: 0;
+            z-index: 10;
+        }
+        header h1 {
+            color: #000;
+            margin: 0;
+            font-weight: 900;
+            font-size: 2rem;
+            letter-spacing: 1.5px;
+        }
+        .balance {
+            font-size: 1.8rem;
+            margin: 1rem auto 0;
+            padding: 1rem;
+            border: 1px solid #ff6f00;
+            border-radius: 8px;
+            box-shadow: 0 0 15px #ff6f00;
+            max-width: 400px;
+            font-weight: 700;
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .label {
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            text-align: center;
+            color: #ff6f00;
+        }
+        .description {
+            max-width: 420px;
+            margin: 0.5rem auto 2rem;
+            font-size: 1rem;
+            color: white;
+            font-weight: 500;
+            position: absolute;
+            top: 250px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .pnl {
+            font-size: 1.3rem;
+            color: #fff;
+            margin-top: 0.5rem;
+            font-weight: 600;
         }
         canvas {
-            border: 1px solid black;
             width: 100vw;
             height: 100vh;
         }
     </style>
 </head>
 <body>
+    <header>
+        <h1>Apex Champ Traders</h1>
+    </header>
+
+    <div class="balance">
+        <div class="label">ACT Balance</div>
+        <div id="vaultPerpBalance">Loading...</div>
+        <div id="vaultPnL" class="pnl">Loading PnL...</div>
+    </div>
+
+    <div class="balance" style="top: 180px;">
+        <div class="label" style="color: #ff6f00;">ACT FAST Funded Asset Secured Treasury Balance</div>
+        <div id="fastBalance">Loading...</div>
+    </div>
+    <div class="description">
+        which is to be used in case of liquidation risk.
+    </div>
+
     <canvas id="chartCanvas"></canvas>
+
     <script>
         const canvas = document.getElementById('chartCanvas');
         const ctx = canvas.getContext('2d');
         let candles = [];
         let lastX = -50;
-        let totalLeftMovement = 0; // Track cumulative left movement
+        let totalLeftMovement = 0;
 
         // Set canvas size to full window
         canvas.width = window.innerWidth;
@@ -36,40 +114,36 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw existing candles
             drawCandles();
 
-            // Spawn new candle only if moved right by 50 pixels
             if (x - lastX >= 50 && e.movementX > 0) {
-                const mouseY = y; // Capture mouse y-position
-                const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY; // Initial open at center
-                const openY = lastClose; // Open at previous close
-                const closeY = mouseY; // Close follows mouse
+                const mouseY = y;
+                const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY;
+                const openY = lastClose;
+                const closeY = mouseY;
                 const bodyHeight = Math.abs(closeY - openY);
                 const color = closeY < openY ? 'green' : 'red';
-                const topWickLength = Math.random() * 20 + 5; // Random top wick 5-25
-                const bottomWickLength = Math.random() * 20 + 5; // Random bottom wick 5-25
+                const topWickLength = Math.random() * 30 + 10; // Random top wick 10-40
+                const bottomWickLength = Math.random() * 30 + 10; // Random bottom wick 10-40
 
                 candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight: bodyHeight, color, topWickLength, bottomWickLength });
                 lastX = x;
-                totalLeftMovement = 0; // Reset left movement after adding a candle
-            } else if (e.movementX < 0) { // Track left movement for deletion
+                totalLeftMovement = 0;
+            } else if (e.movementX < 0) {
                 totalLeftMovement += Math.abs(e.movementX);
-                if (totalLeftMovement >= 50 && candles.length > 0) { // Delete if 50 pixels accumulated
+                if (totalLeftMovement >= 50 && candles.length > 0) {
                     candles.pop();
                     lastX = candles.length > 0 ? candles[candles.length - 1].x : -50;
-                    totalLeftMovement = 0; // Reset after deletion
+                    totalLeftMovement = 0;
                 }
             }
 
-            // Redraw updated candles
             drawCandles();
         });
 
         function drawCandles() {
+            ctx.globalAlpha = 0.7; // Lower transparency for background effect
             candles.forEach(candle => {
                 ctx.fillStyle = candle.color;
                 const bodyTop = Math.min(candle.openY, candle.closeY);
@@ -81,14 +155,94 @@
                 ctx.lineTo(candle.x, bodyTop + candle.bodyHeight + candle.bottomWickLength); // Bottom wick
                 ctx.stroke();
             });
+            ctx.globalAlpha = 1.0; // Reset transparency
         }
 
-        // Resize canvas on window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             centerY = canvas.height / 2;
         });
+
+        // Your existing balance script
+        const FAST_WALLET = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
+        const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
+
+        async function fetchSpotBalance(address) {
+            try {
+                const res = await fetch("https://api.hyperliquid.xyz/info", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: "spotClearinghouseState", user: address })
+                });
+                const data = await res.json();
+                if (data.balances) {
+                    return data.balances.reduce((sum, b) => sum + parseFloat(b.total), 0);
+                }
+                return 0;
+            } catch (e) {
+                console.error("Spot fetch error:", e);
+                return 0;
+            }
+        }
+
+        async function fetchPerpData(address, dex = "") {
+            try {
+                const res = await fetch("https://api.hyperliquid.xyz/info", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: "clearinghouseState", user: address, dex: dex })
+                });
+                const data = await res.json();
+                return data;
+            } catch (e) {
+                console.error("Perp fetch error:", e);
+                return null;
+            }
+        }
+
+        async function fetchBalances() {
+            document.getElementById('fastBalance').textContent = "Loading...";
+            document.getElementById('vaultPerpBalance').textContent = "Loading...";
+            document.getElementById('vaultPnL').textContent = "Loading PnL...";
+
+            const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
+                fetchSpotBalance(FAST_WALLET),
+                fetchPerpData(FAST_WALLET),
+                fetchPerpData(VAULT_WALLET),
+            ]);
+
+            let fastPerp = 0;
+            if (fastPerpData && fastPerpData.marginSummary && fastPerpData.marginSummary.accountValue) {
+                fastPerp = parseFloat(fastPerpData.marginSummary.accountValue);
+            }
+
+            let vaultPerp = 0;
+            let vaultPnL = 0;
+            if (vaultPerpData) {
+                if (vaultPerpData.marginSummary && vaultPerpData.marginSummary.accountValue) {
+                    vaultPerp = parseFloat(vaultPerpData.marginSummary.accountValue);
+                }
+                if (vaultPerpData.assetPositions && Array.isArray(vaultPerpData.assetPositions)) {
+                    vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos) => {
+                        return acc + parseFloat(pos.position.unrealizedPnl || 0);
+                    }, 0);
+                }
+            }
+
+            const fastTotal = fastSpot + fastPerp;
+
+            document.getElementById('fastBalance').textContent = fastTotal.toFixed(4);
+            document.getElementById('vaultPerpBalance').textContent = vaultPerp.toFixed(4);
+
+            const pnlText = (vaultPnL >= 0 ? "+" : "") + vaultPnL.toFixed(4);
+            const pnlColor = vaultPnL >= 0 ? "#0f0" : "#f00";
+            const pnlElem = document.getElementById('vaultPnL');
+            pnlElem.textContent = `Unrealized PnL: ${pnlText}`;
+            pnlElem.style.color = pnlColor;
+        }
+
+        fetchBalances();
     </script>
 </body>
 </html>

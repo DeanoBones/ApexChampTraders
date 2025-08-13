@@ -12,15 +12,19 @@
             background: #000;
             color: #ff6f00;
             font-family: "Microsoft Sans Serif", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
         }
         header {
             background-color: #ff6f00;
             padding: 1rem 0;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             box-shadow: 0 3px 8px rgba(255,111,0,0.7);
-            position: absolute;
             width: 100%;
-            top: 0;
+            text-align: center;
             z-index: 10;
         }
         header h1 {
@@ -38,13 +42,10 @@
             box-shadow: 0 0 15px #ff6f00;
             max-width: 400px;
             font-weight: 700;
-            position: absolute;
-            left: 20px;
             background: rgba(0, 0, 0, 0.8);
             z-index: 10;
+            margin: 1rem 0;
         }
-        .balance:first-child { top: 80px; } /* ACT Balance */
-        .balance:nth-child(2) { top: 200px; } /* ACT FAST Balance */
         .label {
             font-weight: 900;
             margin-bottom: 0.5rem;
@@ -54,15 +55,13 @@
         }
         .description {
             max-width: 420px;
-            margin: 0.5rem 0 2rem;
+            margin: 1rem 0 2rem;
             font-size: 1rem;
             color: white;
             font-weight: 500;
-            position: absolute;
-            top: 320px;
-            left: 20px;
-            z-index: 10;
             background: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            text-align: center;
         }
         .pnl {
             font-size: 1.3rem;
@@ -73,6 +72,10 @@
         canvas {
             width: 100vw;
             height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
         }
     </style>
 </head>
@@ -118,25 +121,24 @@
             drawCandles();
 
             if (x - lastX >= 50 && e.movementX > 0) {
-    const mouseY = y;
-    const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY;
-    const openY = lastClose;
-    const closeY = mouseY;
-    const bodyHeight = Math.abs(closeY - openY);
-    const color = closeY < openY ? 'green' : 'red';
-    const topWickLength = Math.random() * 50; // Random top wick 0-50
-    const bottomWickLength = Math.random() * 50; // Random bottom wick 0-50
+                const mouseY = y;
+                const lastClose = candles.length > 0 ? candles[candles.length - 1].closeY : centerY;
+                const openY = lastClose;
+                const closeY = mouseY;
+                const bodyHeight = Math.abs(closeY - openY);
+                const color = closeY < openY ? 'green' : 'red';
+                const topWickLength = Math.random() * 50; // Random top wick 0-50
+                const bottomWickLength = Math.random() * 50; // Random bottom wick 0-50
 
-    candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight: bodyHeight, color, topWickLength, bottomWickLength });
-    lastX = x;
-    totalLeftMovement = 0;
-}
+                candles.push({ x: x, openY: openY, closeY: closeY, bodyHeight: bodyHeight, color, topWickLength, bottomWickLength });
+                lastX = x;
+                totalLeftMovement = 0;
             } else if (e.movementX < 0) {
                 totalLeftMovement += Math.abs(e.movementX);
                 if (totalLeftMovement >= 40 && candles.length > 0) {
                     candles.pop();
                     lastX = candles.length > 0 ? candles[candles.length - 1].x : -50;
-                    totalLeftMovement = 0;
+                    totalLeftMovement = 0; // Reset after deletion
                 }
             }
 

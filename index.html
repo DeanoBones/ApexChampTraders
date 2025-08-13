@@ -1,187 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Apex Champ Traders</title>
-<style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: black;
-    font-family: "Microsoft Sans Serif", sans-serif;
-    color: white;
-    overflow: hidden;
-  }
-
-  .banner {
-    background: orange;
-    padding: 15px;
-    text-align: center;
-    font-size: 24px;
-    font-weight: bold;
-    color: black;
-  }
-
-  .container {
-    position: relative;
-    z-index: 1;
-    padding: 40px 20px;
-    text-align: center;
-  }
-
-  .balance {
-    font-size: 48px;
-    margin-bottom: 10px;
-  }
-
-  .label {
-    font-size: 18px;
-    margin-bottom: 20px;
-  }
-
-  .fast {
-    margin-top: 40px;
-    font-size: 28px;
-  }
-
-  .description {
-    font-size: 16px;
-    margin-top: 5px;
-  }
-
-  canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-  }
-
-  #sparkline {
-    margin-top: 20px;
-    height: 60px;
-    width: 200px;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Chart</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
 </head>
 <body>
+    <canvas id="chartCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+        let candles = [];
+        let lastX = -50;
 
-<div class="banner">Apex Champ Traders</div>
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-<div class="container">
-  <div class="balance" id="vaultBalance">$0.00</div>
-  <div class="label">ACT Balance</div>
-  
-  <canvas id="sparkline"></canvas>
-  
-  <div class="fast" id="fastBalance">$0.00</div>
-  <div class="description">Funded Asset Secured Treasury which is to be used in case of liquidation risk.</div>
-  
-  <div class="fast" id="pnl">PnL: $0.00</div>
-</div>
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-<canvas id="background"></canvas>
+            // Draw existing candles
+            drawCandles();
 
-<script>
-  // ======== LIVE BALANCES (replace with your wallet addresses) ========
-  const vaultAddress = "0xVaultAddressHere";
-  const fastAddress = "0xFASTAddressHere";
+            // Spawn new candle only if moved right by 50 pixels
+            if (x - lastX >= 50 && e.movementX > 0) {
+                const mouseY = y; // Capture mouse y-position
+                const isUp = mouseY < 200; // Above center is up
+                const closeY = mouseY; // Close price at mouse position
+                const bodyHeight = Math.abs(200 - mouseY); // Distance from center to mouse
+                const color = isUp ? 'green' : 'red';
+                const wickLength = Math.random() * 20 + 10; // Random wick 10-30
 
-  // For testing we use fake balances; replace these with actual fetch logic
-  let vaultBalance = 386; 
-  let fastBalance = 100; 
-  let startingBalance = 300;
-  let pnl = vaultBalance - startingBalance;
+                candles.push({ x: x, closeY: closeY, bodyHeight: bodyHeight, color, wickLength });
+                lastX = x;
+            } else if (e.movementX < 0) { // Moving left deletes last candle
+                candles.pop();
+                lastX = candles.length > 0 ? candles[candles.length - 1].x : -50;
+            }
 
-  document.getElementById("vaultBalance").innerText = `$${vaultBalance.toFixed(2)}`;
-  document.getElementById("fastBalance").innerText = `$${fastBalance.toFixed(2)}`;
-  document.getElementById("pnl").innerText = `PnL: $${pnl.toFixed(2)}`;
+            // Redraw updated candles
+            drawCandles();
+        });
 
-  // ======== FAKE SPARKLINE ========
-  const sparkCanvas = document.getElementById("sparkline");
-  sparkCanvas.width = 200;
-  sparkCanvas.height = 60;
-  const sparkCtx = sparkCanvas.getContext("2d");
-
-  function drawSparkline() {
-    const points = 20;
-    let balances = [];
-    for (let i = 0; i < points; i++) {
-      let t = i / (points - 1);
-      let fluctuation = (Math.random() - 0.5) * 5;
-      balances.push(startingBalance + t * pnl + fluctuation);
-    }
-    sparkCtx.clearRect(0,0,sparkCanvas.width,sparkCanvas.height);
-    sparkCtx.beginPath();
-    for (let i = 0; i < points; i++) {
-      let x = i * (sparkCanvas.width / (points -1));
-      let y = sparkCanvas.height - ((balances[i] - startingBalance)/(vaultBalance-startingBalance+pnl/2)) * sparkCanvas.height;
-      if (i === 0) sparkCtx.moveTo(x,y);
-      else sparkCtx.lineTo(x,y);
-    }
-    sparkCtx.strokeStyle = "orange";
-    sparkCtx.lineWidth = 2;
-    sparkCtx.stroke();
-  }
-  drawSparkline();
-
-  // ======== BACKGROUND CANDLESTICKS ========
-  const bgCanvas = document.getElementById("background");
-  const bgCtx = bgCanvas.getContext("2d");
-
-  function initCanvas(){
-    bgCanvas.width = window.innerWidth;
-    bgCanvas.height = window.innerHeight;
-  }
-  initCanvas();
-  window.addEventListener("resize", initCanvas);
-
-  const numCandles = 20;
-  const candlesticks = [];
-  const spacing = bgCanvas.width / numCandles;
-
-  for(let i=0; i<numCandles; i++){
-    candlesticks.push({
-      x: i * spacing + spacing/2,
-      y: Math.random() * bgCanvas.height,
-      width: 2 + Math.random()*3,
-      height: 20 + Math.random()*40,
-      wickLength: 5 + Math.random()*15
-    });
-  }
-
-  let mouseY = bgCanvas.height/2;
-  window.addEventListener("mousemove", e=> mouseY = e.clientY);
-
-  function animateBackground(){
-    bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-    bgCtx.strokeStyle = "rgba(255,165,0,0.4)";
-    bgCtx.lineWidth = 2;
-
-    candlesticks.forEach(c=>{
-      // move up/down with mouse
-      let targetY = mouseY - bgCanvas.height/2;
-      c.y += (targetY - c.y) * 0.02;
-
-      // draw candle
-      bgCtx.beginPath();
-      bgCtx.moveTo(c.x, c.y);
-      bgCtx.lineTo(c.x, c.y + c.height);
-      bgCtx.stroke();
-
-      // draw wick
-      bgCtx.beginPath();
-      bgCtx.moveTo(c.x + c.width/2, c.y - c.wickLength);
-      bgCtx.lineTo(c.x + c.width/2, c.y);
-      bgCtx.stroke();
-    });
-
-    requestAnimationFrame(animateBackground);
-  }
-  animateBackground();
-
-</script>
+        function drawCandles() {
+            candles.forEach(candle => {
+                ctx.fillStyle = candle.color;
+                const bodyTop = candle.closeY < 200 ? candle.closeY : 200 - candle.bodyHeight;
+                ctx.fillRect(candle.x - 5, bodyTop, 10, candle.bodyHeight); // Body
+                ctx.beginPath();
+                ctx.moveTo(candle.x, bodyTop - candle.wickLength); // Top wick
+                ctx.lineTo(candle.x, bodyTop); // To body top
+                ctx.moveTo(candle.x, bodyTop + candle.bodyHeight); // From body bottom
+                ctx.lineTo(candle.x, bodyTop + candle.bodyHeight + candle.wickLength); // Bottom wick
+                ctx.stroke();
+            });
+        }
+    </script>
 </body>
 </html>

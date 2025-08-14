@@ -43,7 +43,7 @@
     .balance .value{ font-size:1.5rem; font-weight:600; margin-top:.25rem; }
     .pnl{ font-size:1.4rem; font-weight:600; margin-top:.5rem; }
     .pnl.green{ color:#0f0; } .pnl.red{ color:#f00; }
-
+    .danger-line{ color:var(--orange); display:block; margin-top:6px; }
     .description{
       margin-top:.75rem; font-size:.95rem; line-height:1.4; color:#ffcc80;
     }
@@ -61,6 +61,7 @@
       <div class="label">ACT Balance</div>
       <div id="vaultPerpBalance" class="value">Loading...</div>
       <div id="vaultPnL" class="pnl">Loading PnL...</div>
+      <div id="liquidationDanger"></div>
       <div class="description">
         ACT is a professionally managed trading vault with huge upside potential and very little downside risk. Capital is strategically allocated to drive strong performance while protecting your assets.
       </div>
@@ -140,7 +141,7 @@
       ctx.globalAlpha = 1;
     }
 
-    // ---------- Replace with your real 0x addresses (no spaces) ----------
+    // ---------- Replace with your real 0x addresses ----------
     const FAST_WALLET  = "0x17a515540CBa017A1d82b68bf68b4410CB301732";
     const VAULT_WALLET = "0x92b2a18ed4b0b113cc8aa11ff23881e5aeb88cb1";
 
@@ -181,10 +182,12 @@
       const fastEl   = document.getElementById('fastBalance');
       const vaultEl  = document.getElementById('vaultPerpBalance');
       const pnlEl    = document.getElementById('vaultPnL');
+      const dangerEl = document.getElementById('liquidationDanger');
 
       fastEl.textContent  = "Loading...";
       vaultEl.textContent = "Loading...";
       pnlEl.textContent   = "Loading PnL...";
+      dangerEl.textContent = "";
 
       const [fastSpot, fastPerpData, vaultPerpData] = await Promise.all([
         fetchSpotBalance(FAST_WALLET),
@@ -192,37 +195,42 @@
         fetchPerpData(VAULT_WALLET),
       ]);
 
-      // Parse numbers safely
+      console.log("Vault perp raw data:", vaultPerpData);
+
       const fastPerp  = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
       const vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
 
-      // Sum unrealized PnL across open positions (if any)
+      // Unrealized PNL
       let vaultPnL = 0;
       if (Array.isArray(vaultPerpData?.assetPositions)){
-        vaultPnL = vaultPerpData.assetPositions.reduce((acc, pos)=>{
+        vaultPnL = vaultPerpData.assetPositions.reduce((acc,pos)=>{
           const pnl = parseFloat(pos?.position?.unrealizedPnl);
-          return acc + (isNaN(pnl) ? 0 : pnl);
-        }, 0);
+          return acc + (isNaN(pnl)?0:pnl);
+        },0);
       }
-      vaultPnL = isNaN(vaultPnL) ? 0 : vaultPnL;
+      vaultPnL = isNaN(vaultPnL)?0:vaultPnL;
 
-      const fastTotal = Number(fastSpot) + Number(fastPerp);
+      // Maintenance margin
+      const maintenance = parseFloat(vaultPerpData?.crossMaintenanceMarginUsed) || 0;
+      // Liquidation danger = 2x maintenance
+      const liquidationDanger = 2 * maintenance;
+
+      // Total notional open positions
+      const totalNtlPos = parseFloat(vaultPerpData?.marginSummary?.totalNtlPos) || 0;
 
       // Update UI
-      fastEl.textContent  = `$${fastTotal.toFixed(4)}`;
-vaultEl.textContent = `$${vaultPerp.toFixed(4)}`;
+      fastEl.textContent  = `$${(Number(fastSpot) + Number(fastPerp)).toFixed(4)}`;
+      vaultEl.textContent = `$${vaultPerp.toFixed(4)}`;
+      pnlEl.textContent   = `Unrealized PNL: ${(vaultPnL>=0?"+$":"-$")}${Math.abs(vaultPnL).toFixed(4)}`;
+      pnlEl.className     = "pnl " + (vaultPnL >=0 ? "green":"red");
 
-const pnlText = (vaultPnL >= 0 ? "+" : "") + `$${vaultPnL.toFixed(4)}`;
-pnlEl.textContent = `Unrealized PnL: ${pnlText}`;
-pnlEl.className = "pnl " + (vaultPnL >= 0 ? "green" : "red");
-
-      // Optional debug
-      // console.log({ fastSpot, fastPerpData, vaultPerpData, fastPerp, vaultPerp, vaultPnL });
+      // Orange separate lines for liquidation danger and total notional
+      dangerEl.innerHTML = `<span class="danger-line">Liquidation Danger: $${liquidationDanger.toFixed(4)}</span>
+                            <span class="danger-line">Total Exposure: $${totalNtlPos.toFixed(4)}</span>`;
     }
 
+    // Run only on page load, no auto-refresh
     fetchBalances();
-    // Optionally refresh every 60s:
-    // setInterval(fetchBalances, 60000);
   </script>
 </body>
 </html>

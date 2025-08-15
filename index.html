@@ -195,8 +195,6 @@
         fetchPerpData(VAULT_WALLET),
       ]);
 
-      console.log("Vault perp raw data:", vaultPerpData);
-
       const fastPerp  = parseFloat(fastPerpData?.marginSummary?.accountValue) || 0;
       const vaultPerp = parseFloat(vaultPerpData?.marginSummary?.accountValue) || 0;
 
@@ -210,23 +208,31 @@
       }
       vaultPnL = isNaN(vaultPnL)?0:vaultPnL;
 
-      // Maintenance margin
+      // Maintenance margin & liquidation danger
       const maintenance = parseFloat(vaultPerpData?.crossMaintenanceMarginUsed) || 0;
-      // Liquidation danger = 2x maintenance
       const liquidationDanger = 2 * maintenance;
 
-      // Total notional open positions
+      // Total exposure
       const totalNtlPos = parseFloat(vaultPerpData?.marginSummary?.totalNtlPos) || 0;
+
+      // Exposure percentage vs 3x account value
+      const targetExposure = vaultPerp * 3;
+      const exposurePercent = targetExposure > 0 ? (totalNtlPos / targetExposure) * 100 : 0;
+      const percentColor = exposurePercent > 100 ? "red" : "green";
 
       // Update UI
       fastEl.textContent  = `$${(Number(fastSpot) + Number(fastPerp)).toFixed(4)}`;
       vaultEl.textContent = `$${vaultPerp.toFixed(4)}`;
-      pnlEl.textContent   = `Unrealized PNL: ${(vaultPnL>=0?"+$":"-$")}${Math.abs(vaultPnL).toFixed(4)}`;
-      pnlEl.className     = "pnl " + (vaultPnL >=0 ? "green":"red");
+      pnlEl.textContent   = `Unrealized PNL: ${(vaultPnL >= 0 ? "+$" : "-$")}${Math.abs(vaultPnL).toFixed(4)}`;
+      pnlEl.className     = "pnl " + (vaultPnL >= 0 ? "green" : "red");
 
-      // Orange separate lines for liquidation danger and total notional
-      dangerEl.innerHTML = `<span class="danger-line">Liquidation Danger: $${liquidationDanger.toFixed(4)}</span>
-                            <span class="danger-line">Total Exposure: $${totalNtlPos.toFixed(4)}</span>`;
+      // Orange separate lines for liquidation danger, total exposure with percentage
+      dangerEl.innerHTML = `
+        <span class="danger-line">Liquidation Danger: $${liquidationDanger.toFixed(4)}</span>
+        <span class="danger-line">Total Exposure: $${totalNtlPos.toFixed(4)}
+          <span style="color:${percentColor}">(${exposurePercent.toFixed(2)}%)</span>
+        </span>
+      `;
     }
 
     // Run only on page load, no auto-refresh
